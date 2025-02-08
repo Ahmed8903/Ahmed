@@ -1,0 +1,75 @@
+body {
+    background-color: #f0f0f0;
+    font-family: Arial;
+  }
+  
+  .container {
+    width: 80%;
+    margin: auto;
+    padding: 20px;
+  }
+  :root {
+    --primary-color: #007bff;
+    --background: rgba(255, 255, 255, 0.9);
+    --text-color: #333;
+    --message-sent: rgba(0, 123, 255, 0.9);
+    --message-received: rgba(241, 243, 244, 0.9);
+    --border-radius: 20px;
+    --blur-intensity: blur(20px);
+    --gradient-1: #6b6bff;
+    --gradient-2: #ff6b6b;
+    --gradient-3: #6bff6b;
+  }
+  
+  [data-theme="dark"] {
+    --background: rgba(26, 26, 26, 0.9);
+    --text-color: #fff;
+    --message-received: rgba(45, 45, 45, 0.9);
+    --gradient-1: #2d2d6b;
+    --gradient-2: #6b2d2d;
+    --gradient-3: #2d6b2d;
+  }
+  
+  .chat-container {
+    background: var(--background);
+    backdrop-filter: var(--blur-intensity);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  .message {
+    backdrop-filter: var(--blur-intensity);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* تحريك الخلفية */
+  @keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  body {
+    background: linear-gradient(
+      45deg,
+      var(--gradient-1),
+      var(--gradient-2),
+      var(--gradient-3)
+    );
+    background-size: 400% 400%;
+    animation: gradientFlow 15s ease infinite;
+  }
+  
+  /* تأثير الضبابية */
+  .noise-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('data:image/png;base64,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');
+    opacity: 0.1;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    z-index: -1;
+  }

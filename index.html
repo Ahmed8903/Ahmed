@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <link rel="manifest" href="manifest.json">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دردشة متطورة ٢.٠</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --background: #ffffff;
+            --text-color: #333333;
+            --message-sent: #007bff;
+            --message-received: #f1f3f4;
+            --border-radius: 20px;
+            --gradient-1: #6b6bff;
+            --gradient-2: #ff6b6b;
+            --gradient-3: #6bff6b;
+            --gradient-pos: 50%;
+        }
+
+        [data-theme="dark"] {
+            --background: #1a1a1a;
+            --text-color: #ffffff;
+            --message-received: #2d2d2d;
+            --gradient-1: #2d2d6b;
+            --gradient-2: #6b2d2d;
+            --gradient-3: #2d6b2d;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: var(--text-color);
+            background: linear-gradient(
+                45deg,
+                var(--gradient-1),
+                var(--gradient-2),
+                var(--gradient-3)
+            );
+            background-size: 400% 400%;
+            background-position: 0% var(--gradient-pos);
+            transition: background-position 0.3s ease-out;
+        }
+
+        .chat-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(var(--background-rgb), 0.9);
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .messages-container {
+            height: 60vh;
+            overflow-y: auto;
+            padding: 10px;
+            border: 2px solid var(--message-received);
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            margin: 15px 0;
+            padding: 12px 20px;
+            border-radius: var(--border-radius);
+            max-width: 70%;
+            position: relative;
+            animation: fadeIn 0.5s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .message:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .sent {
+            background: var(--message-sent);
+            color: white;
+            margin-left: auto;
+        }
+
+        .received {
+            background: var(--message-received);
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            position: relative;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid var(--message-received);
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            background: var(--background);
+            color: var(--text-color);
+        }
+
+        button {
+            padding: 12px 24px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .emoji-picker {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            background: var(--background);
+            border: 1px solid var(--message-received);
+            border-radius: 15px;
+            padding: 10px;
+            display: none;
+            max-width: 300px;
+            flex-wrap: wrap;
+            gap: 5px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دردشة متطورة ٢.٠ - المجموعات</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .chat-container { max-width: 600px; margin: auto; }
+        .message { padding: 10px; margin: 5px; border-radius: 10px; }
+        .sent { background: #007bff; color: white; text-align: right; }
+        .received { background: #f1f3f4; text-align: left; }
+        .group-container { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="group-container">
+        <input type="text" id="groupName" placeholder="اسم المجموعة">
+        <button onclick="createGroup()">إنشاء مجموعة</button>
+        <input type="text" id="groupCode" placeholder="أدخل كود المجموعة">
+        <button onclick="joinGroup()">انضمام</button>
+    </div>
+    
+    <div class="chat-container" id="chatContainer" style="display: none;">
+        <h2 id="groupTitle"></h2>
+        <div id="messages"></div>
+        <input type="text" id="messageInput" placeholder="اكتب رسالة">
+        <button onclick="sendMessage()">إرسال</button>
+    </div>
+
+    <script>
+        if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js")
+        .then(() => console.log("Service Worker مسجل بنجاح!"))
+        .catch((error) => console.log("فشل تسجيل Service Worker:", error));
+}
+
+        let groups = JSON.parse(localStorage.getItem("groups")) || {};
+        let currentGroup = null;
+
+        function createGroup() {
+            const groupName = document.getElementById("groupName").value.trim();
+            if (!groupName) return alert("يرجى إدخال اسم المجموعة");
+            
+            const groupCode = Math.random().toString(36).substr(2, 6).toUpperCase();
+            groups[groupCode] = { name: groupName, messages: [] };
+            localStorage.setItem("groups", JSON.stringify(groups));
+            alert(`تم إنشاء المجموعة! الكود: ${groupCode}`);
+        }
+
+        function joinGroup() {
+            const groupCode = document.getElementById("groupCode").value.trim().toUpperCase();
+            if (!groups[groupCode]) return alert("كود المجموعة غير صحيح");
+            
+            currentGroup = groupCode;
+            document.getElementById("groupTitle").innerText = groups[groupCode].name;
+            document.getElementById("chatContainer").style.display = "block";
+            loadMessages();
+        }
+
+        function sendMessage() {
+            if (!currentGroup) return alert("يرجى الانضمام إلى مجموعة أولاً");
+            const messageText = document.getElementById("messageInput").value.trim();
+            if (!messageText) return;
+            
+            groups[currentGroup].messages.push({ text: messageText, sent: true });
+            localStorage.setItem("groups", JSON.stringify(groups));
+            loadMessages();
+            document.getElementById("messageInput").value = "";
+        }
+
+        function loadMessages() {
+            const messagesContainer = document.getElementById("messages");
+            messagesContainer.innerHTML = "";
+            
+            if (!currentGroup) return;
+            groups[currentGroup].messages.forEach(msg => {
+                const msgDiv = document.createElement("div");
+                msgDiv.classList.add("message", msg.sent ? "sent" : "received");
+                msgDiv.innerText = msg.text;
+                messagesContainer.appendChild(msgDiv);
+            });
+        }
+    </script>
+</body>
+</html>
+
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <h1>الدردشة الذكية</h1>
+            <button class="theme-toggle">تبديل الثيم</button>
+        </div>
+        
+        <div class="messages-container" id="messagesContainer"></div>
+        
+        <div class="input-container">
+            <input type="file" id="fileInput" hidden accept="image/*">
+            <label for="fileInput" class="file-input-label">📎</label>
+            
+            <div class="emoji-picker" id="emojiPicker"></div>
+            
+            <button id="emojiButton">😊</button>
+            <input type="text" id="messageInput" placeholder="اكتب رسالتك هنا...">
+            <button id="sendButton">إرسال</button>
+        </div>
+    </div>
+
+    <audio id="notificationSound" src="notification.mp3"></audio>
+
+    <script>
+        (() => {
+            const elements = {
+                messagesContainer: document.getElementById('messagesContainer'),
+                messageInput: document.getElementById('messageInput'),
+                fileInput: document.getElementById('fileInput'),
+                emojiPicker: document.getElementById('emojiPicker'),
+                themeToggle: document.querySelector('.theme-toggle'),
+                notificationSound: document.getElementById('notificationSound'),
+                emojiButton: document.getElementById('emojiButton'),
+                sendButton: document.getElementById('sendButton')
+            };
+
+            let messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+            let lastScroll = 0;
+            let typingTimer;
+
+            const emojiCategories = {
+                faces: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣'],
+                animals: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'],
+                objects: ['⌚', '📱', '💻', '⌨️', '🖨️', '🖱️', '📷', '🎥'],
+                symbols: ['❤️', '✨', '🔥', '🌟', '💯', '🎉', '👍', '👎']
+            };
+
+            const soundEffects = {
+                send: new Audio('send-sound.mp3'),
+                receive: new Audio('receive-sound.mp3')
+            };
+
+            // الوظائف الأساسية
+            const initApp = () => {
+                loadMessages();
+                setupEventListeners();
+                detectSystemTheme();
+                buildEmojiPicker();
+            };
+
+            const setupEventListeners = () => {
+                elements.sendButton.addEventListener('click', sendMessage);
+                elements.emojiButton.addEventListener('click', toggleEmojiPicker);
+                elements.themeToggle.addEventListener('click', toggleTheme);
+                elements.messageInput.addEventListener('input', handleTyping);
+                elements.messageInput.addEventListener('keypress', handleEnter);
+                elements.fileInput.addEventListener('change', handleFileUpload);
+                elements.messagesContainer.addEventListener('scroll', handleScroll);
+            };
+
+            const loadMessages = () => {
+                elements.messagesContainer.innerHTML = messages.map((msg, index) => `
+                    <div class="message ${msg.sent ? 'sent' : 'received'}">
+                        ${sanitizeInput(msg.text)}
+                        ${msg.file ? `<img src="${msg.file}" class="message-file">` : ''}
+                        <div class="reactions-container">
+                            ${(msg.reactions || []).map(r => `
+                                <div class="reaction">${r}</div>
+                            `).join('')}
+                        </div>
+                        <small>${msg.timestamp} ${msg.status || ''}</small>
+                    </div>
+                `).join('');
+                elements.messagesContainer.scrollTop = elements.messagesContainer.scrollHeight;
+            };
+
+            const sendMessage = () => {
+                const text = sanitizeInput(elements.messageInput.value.trim());
+                const file = elements.fileInput.files[0];
+
+                if (!text && !file) return;
+
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => processMessage(text, e.target.result);
+                    reader.readAsDataURL(file);
+                } else {
+                    processMessage(text);
+                }
+            };
+
+            const processMessage = (text, fileUrl) => {
+                const newMessage = {
+                    text,
+                    file: fileUrl,
+                    sent: true,
+                    timestamp: new Date().toLocaleTimeString('ar-SA', { 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                    }),
+                    status: '✔️'
+                };
+
+                messages.push(newMessage);
+                saveToLocalStorage();
+                clearInputs();
+                loadMessages();
+                playSound('send');
+                addMessageEffect(newMessage);
+            };
+
+            // الوظائف المساعدة
+            const addMessageEffect = (message) => {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message', message.sent ? 'sent' : 'received');
+                messageElement.innerHTML = `
+                    ${sanitizeInput(message.text)}
+                    ${message.file ? `<img src="${message.file}" class="message-file">` : ''}
+                    <small>${message.timestamp}</small>
+                `;
+
+                messageElement.style.transform = 'translateY(20px)';
+                messageElement.style.opacity = '0';
+                
+                elements.messagesContainer.appendChild(messageElement);
+                
+                requestAnimationFrame(() => {
+                    messageElement.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                    messageElement.style.transform = 'translateY(0)';
+                    messageElement.style.opacity = '1';
+                });
+            };
+
+            const handleScroll = () => {
+                const currentScroll = elements.messagesContainer.scrollTop;
+                const scrollDiff = currentScroll - lastScroll;
+                document.documentElement.style.setProperty(
+                    '--gradient-pos', 
+                    `${scrollDiff * 0.5}%`
+                );
+                lastScroll = currentScroll;
+            };
+
+            const playSound = (type) => {
+                const sound = soundEffects[type];
+                sound.volume = 0.3;
+                sound.play().catch(console.error);
+            };
+
+            const toggleTheme = () => {
+                document.body.setAttribute('data-theme',
+                    document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
+                );
+            };
+
+            const buildEmojiPicker = () => {
+                elements.emojiPicker.innerHTML = Object.entries(emojiCategories)
+                    .map(([category, emojis]) => `
+                        <div class="emoji-category">
+                            <h4>${category}</h4>
+                            ${emojis.map(emoji => `
+                                <button class="emoji-btn" onclick="insertEmoji('${emoji}')">${emoji}</button>
+                            `).join('')}
+                        </div>
+                    `).join('');
+            };
+
+            const toggleEmojiPicker = () => {
+                elements.emojiPicker.style.display = 
+                    elements.emojiPicker.style.display === 'flex' ? 'none' : 'flex';
+            };
+
+            const insertEmoji = (emoji) => {
+                elements.messageInput.value += emoji;
+                toggleEmojiPicker();
+            };
+
+            const detectSystemTheme = () => {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.body.setAttribute('data-theme', 'dark');
+                }
+            };
+
+            const saveToLocalStorage = () => {
+                localStorage.setItem('chatMessages', JSON.stringify(messages));
+            };
+
+            const clearInputs = () => {
+                elements.messageInput.value = '';
+                elements.fileInput.value = '';
+            };
+
+            const handleEnter = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            };
+
+            const handleTyping = () => {
+                // يمكن إضافة مؤشر الكتابة هنا
+            };
+
+            const sanitizeInput = (text) => {
+                const temp = document.createElement('div');
+                temp.textContent = text;
+                return temp.innerHTML;
+            };
+
+            // بدء التطبيق
+            initApp();
+        })();
+    </script>
+</body>
+</html>
